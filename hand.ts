@@ -205,13 +205,16 @@ export class Hand implements HandInterface {
     this._bet(this._nextSeat().playerId, this._gameConfig.smallBlind)
     this._bet(this._nextSeat().playerId, this._gameConfig.bigBlind)
     this._startWith = this._seatIndex
+    this._minRaise = this._gameConfig.bigBlind
   }
   act(playerId: string, action: PlayerAction): void {
     if (this._nextSeat().playerId !== playerId) {
       throw new Error("Cant't act")
     }
     if (action.type === 'bet') {
-      this._bet(playerId, action.amount)
+      if (this.isValidBet(playerId, action.amount)) {
+        this._bet(playerId, action.amount)
+      }
     } else {
       this._fold(playerId)
     }
@@ -222,7 +225,18 @@ export class Hand implements HandInterface {
     } 
   }
   isValidBet(playerId: string, amount: number): boolean {
-    throw new Error("Method not implemented.")
+    const seat = this.getSeatByPlayerId(playerId)
+    const sum = amount + (this._bets[playerId] || 0)
+
+    if (seat && (
+      amount <= seat.stack &&
+      (sum === this._minRaise
+      || sum >= (this._minRaise * 2))
+    )) {
+      return true
+    } else {
+      return false
+    }
   }
   getSeatByPlayerId(playerId: string): Seat | undefined {
     return this._seats.find(s => s.playerId === playerId)

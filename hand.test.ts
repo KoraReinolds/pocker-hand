@@ -70,3 +70,35 @@ test("continues turn if BB raises", async () => {
   await act(hand, "c", { type: "bet", amount: 20 });
   expect(hand.getState().communityCards.length).toBe(0);
 });
+
+test("invalid Bet", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  expect(
+    [1, 19, 21, 39]
+      .map(bet => hand.isValidBet('a', bet))
+      .every(res => res === false)
+    ).toBe(true);
+
+  expect(
+    [1, 19]
+      .map(bet => hand.isValidBet('c', bet))
+      .every(res => res === false)
+    ).toBe(true);
+});
+
+test("valid Bet", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  expect(
+    [20, 40, 41]
+      .map(bet => hand.isValidBet('a', bet))
+      .every(res => res === true)
+    ).toBe(true);
+
+  expect(
+    [0, 20]
+      .map(bet => hand.isValidBet('c', bet))
+      .every(res => res === true)
+    ).toBe(true);
+});
