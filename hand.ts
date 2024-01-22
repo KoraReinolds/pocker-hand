@@ -202,6 +202,7 @@ export class Hand implements HandInterface {
     this._holeCards = this._dealCards(this._deck, this._seats)
     this._deckPointer = this._seats.length * 2 + 1
 
+    this._seatIndex = this._seats.length === 2 ? -1 : 0
     this._bet(this._nextSeat().playerId, this._gameConfig.smallBlind)
     this._bet(this._nextSeat().playerId, this._gameConfig.bigBlind)
     this._startWith = this._seatIndex

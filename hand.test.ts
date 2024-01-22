@@ -51,6 +51,11 @@ test("gets small and big blind from players", async () => {
   expect(hand.getState().bets).toEqual({ b: 10, c: 20 });
 });
 
+test("gets small and big blind from 2 players", async () => {
+  const { hand } = await makeHand([player("a"), player("b")]);
+  expect(hand.getState().bets).toEqual({ a: 10, b: 20 });
+});
+
 test("proceeds to flop if BB checks", async () => {
   const { hand } = await makeHand([player("a"), player("b"), player("c")]);
 
@@ -111,6 +116,16 @@ test("After one round of betting is done, the next betting round will start by t
   await act(hand, "c", { type: "bet", amount: 0 });
 
   const actAfterFlop = await act(hand, "b", { type: "bet", amount: 10 })
+  expect(actAfterFlop).not.toThrow(new Error());
+});
+
+test("After one round of betting is done with 2 players", async () => {
+  const { hand } = await makeHand([player("a"), player("b")]);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 10 });
+
+  const actAfterFlop = await act(hand, "a", { type: "bet", amount: 10 })
   expect(actAfterFlop).not.toThrow(new Error());
 });
 
