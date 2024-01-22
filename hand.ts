@@ -220,8 +220,11 @@ export class Hand implements HandInterface {
     }
 
     if ((this._seatIndex === this._startWith) && this._isBetsEqual()) {
-      this._communityCards = this._openCards(this._communityCards, this._deck.splice(this._deckPointer, 3) as string[])
-      this._deckPointer += 3
+      if (this._communityCards.length === 0) {
+        this._communityCards = this._openCards(this._communityCards, this._deck.splice(this._deckPointer, 3) as string[])
+        this._deckPointer += 3
+        this._nextSeat()
+      }
     } 
   }
   isValidBet(playerId: string, amount: number): boolean {

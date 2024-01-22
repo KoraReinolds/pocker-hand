@@ -102,3 +102,25 @@ test("valid Bet", async () => {
       .every(res => res === true)
     ).toBe(true);
 });
+
+test("After one round of betting is done, the next betting round will start by the person in the small blind", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 10 });
+  await act(hand, "c", { type: "bet", amount: 0 });
+
+  const actAfterFlop = await act(hand, "b", { type: "bet", amount: 10 })
+  expect(actAfterFlop).not.toThrow(new Error());
+});
+
+test("After one round of betting is done and the person with the small blind is fold", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "fold" });
+  await act(hand, "c", { type: "bet", amount: 0 });
+
+  const actAfterFlop = await act(hand, "c", { type: "bet", amount: 10 })
+  expect(actAfterFlop).not.toThrow(new Error());
+});
