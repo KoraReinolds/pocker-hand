@@ -127,6 +127,7 @@ export class Hand implements HandInterface {
 
   private _seats: Seat[]
   private _seatIndex = 0
+  private _startWith = 0
   
   private _foldPlayers: string[] = []
   
@@ -203,10 +204,10 @@ export class Hand implements HandInterface {
 
     this._bet(this._nextSeat().playerId, this._gameConfig.smallBlind)
     this._bet(this._nextSeat().playerId, this._gameConfig.bigBlind)
-    this._seatIndex = 0
+    this._startWith = this._seatIndex
   }
   act(playerId: string, action: PlayerAction): void {
-    if (this._getSeat().playerId !== playerId) {
+    if (this._nextSeat().playerId !== playerId) {
       throw new Error("Cant't act")
     }
     if (action.type === 'bet') {
@@ -214,8 +215,8 @@ export class Hand implements HandInterface {
     } else {
       this._fold(playerId)
     }
-    this._nextSeat()
-    if (!this._seatIndex && this._isBetsEqual()) {
+
+    if ((this._seatIndex === this._startWith) && this._isBetsEqual()) {
       this._communityCards = this._openCards(this._communityCards, this._deck.splice(this._deckPointer, 3) as string[])
       this._deckPointer += 3
     } 
