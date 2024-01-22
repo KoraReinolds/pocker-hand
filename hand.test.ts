@@ -50,3 +50,23 @@ test("gets small and big blind from players", async () => {
   const { hand } = await makeHand([player("a"), player("b"), player("c")]);
   expect(hand.getState().bets).toEqual({ b: 10, c: 20 });
 });
+
+test("proceeds to flop if BB checks", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "fold" });
+  expect(hand.getState().communityCards).toEqual([]);
+  await act(hand, "c", { type: "bet", amount: 0 });
+  expect(hand.getState().communityCards.length).toBe(3);
+});
+
+test("continues turn if BB raises", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "fold" });
+  expect(hand.getState().communityCards).toEqual([]);
+  await act(hand, "c", { type: "bet", amount: 20 });
+  expect(hand.getState().communityCards.length).toBe(0);
+});

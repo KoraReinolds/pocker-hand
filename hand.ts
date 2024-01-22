@@ -127,6 +127,9 @@ export class Hand implements HandInterface {
 
   private _seats: Seat[]
   private _seatIndex = 0
+  
+  private _foldPlayers: string[] = []
+  
   private _gameConfig: GameConfigType
   private _makeDeck: () => string[]
   private _sleep: (ms: number) => Promise<unknown>
@@ -150,9 +153,31 @@ export class Hand implements HandInterface {
     this._bets[playerId] += bet
   }
 
-  private _nextSeat() {
-    this._seatIndex = (this._seatIndex + 1) % this._seats.length
+  private _fold(playerId: string) {
+    this._foldPlayers.push(playerId)
+  }
+
+  private _getSeat(): Seat {
     return this._seats[this._seatIndex] as Seat
+  }
+
+  private _nextSeat(): Seat {
+    this._seatIndex = (this._seatIndex + 1) % this._seats.length
+    const seat: Seat = this._getSeat()
+    return (this._foldPlayers.includes(seat.playerId))
+      ? this._nextSeat()
+      : seat
+  }
+
+  private _openCards(communityCards: string[], cards: string[]) {
+    return [...communityCards, ...cards]
+  }
+  
+  private _isBetsEqual() {
+    const betsInPlay = Object.entries(this._bets)
+      .filter(([id]) => !this._foldPlayers.includes(id))
+      .map(([_, bet]) => bet)
+    return betsInPlay[0] === (betsInPlay.reduce((sum, cur) => sum + cur) / betsInPlay.length)
   }
 
   getState(): {
@@ -178,9 +203,22 @@ export class Hand implements HandInterface {
 
     this._bet(this._nextSeat().playerId, this._gameConfig.smallBlind)
     this._bet(this._nextSeat().playerId, this._gameConfig.bigBlind)
+    this._seatIndex = 0
   }
   act(playerId: string, action: PlayerAction): void {
-    throw new Error("Method not implemented.")
+    if (this._getSeat().playerId !== playerId) {
+      throw new Error("Cant't act")
+    }
+    if (action.type === 'bet') {
+      this._bet(playerId, action.amount)
+    } else {
+      this._fold(playerId)
+    }
+    this._nextSeat()
+    if (!this._seatIndex && this._isBetsEqual()) {
+      this._communityCards = this._openCards(this._communityCards, this._deck.splice(this._deckPointer, 3) as string[])
+      this._deckPointer += 3
+    } 
   }
   isValidBet(playerId: string, amount: number): boolean {
     throw new Error("Method not implemented.")
