@@ -152,6 +152,7 @@ export class Hand implements HandInterface {
     if (!this._bets[playerId]) this._bets[playerId] = 0
     
     this._bets[playerId] += bet
+    this._minRaise = Math.max(this._bets[playerId] || 0, this._minRaise)
   }
 
   private _fold(playerId: string) {
@@ -225,6 +226,7 @@ export class Hand implements HandInterface {
         this._communityCards = this._openCards(this._communityCards, this._deck.splice(this._deckPointer, 3) as string[])
         this._deckPointer += 3
         this._nextSeat()
+        this._minRaise = this._gameConfig.bigBlind
       }
     } 
   }

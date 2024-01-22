@@ -139,3 +139,21 @@ test("After one round of betting is done and the person with the small blind is 
   const actAfterFlop = await act(hand, "c", { type: "bet", amount: 10 })
   expect(actAfterFlop).not.toThrow(new Error());
 });
+
+test("increased bet", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 42 });
+
+  expect(hand.getState().minRaise).toBe(42);
+});
+
+test("reset bet after flop", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 42 });
+  await act(hand, "b", { type: "bet", amount: 32 });
+  await act(hand, "c", { type: "fold" });
+
+  expect(hand.getState().minRaise).toBe(20);
+});
