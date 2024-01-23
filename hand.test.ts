@@ -159,6 +159,7 @@ test("reset bets after flop", async () => {
   expect(Object.values(hand.getState().bets).reduce((a,b) => a+b)).toBe(0);
 });
 
+//Turn
 test("turn", async () => {
   const { hand } = await makeHand([player("a"), player("b"), player("c")]);
 
@@ -246,6 +247,136 @@ test("second player acts first after turn", async () => {
   expect(actAfterFlop).not.toThrow(new Error());
 });
 
+test("diller acts last after turn 2 player", async () => {
+  const { hand } = await makeHand([player("a"), player("b")]);
+
+  await act(hand, "a", { type: "bet", amount: 10 });
+  await act(hand, "b", { type: "bet", amount: 20 });
+  await act(hand, "a", { type: "bet", amount: 20 });
+
+  expect(hand.getState().communityCards.length).toBe(3);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 20 });
+
+  expect(hand.getState().communityCards.length).toBe(4);
+
+  const actAfterFlop = await act(hand, "a", { type: "bet", amount: 20 })
+  expect(actAfterFlop).not.toThrow(new Error());
+})
+
+// River
+test("river", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 10 });
+  await act(hand, "c", { type: "bet", amount: 20 });
+  
+  expect(hand.getState().communityCards.length).toBe(0);
+  
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 20 });
+
+  expect(hand.getState().communityCards.length).toBe(3);
+
+  await act(hand, "b", { type: "bet", amount: 20 });
+  await act(hand, "c", { type: "bet", amount: 20 });
+  await act(hand, "a", { type: "bet", amount: 20 });
+  
+  expect(hand.getState().communityCards.length).toBe(4);
+  
+  await act(hand, "b", { type: "bet", amount: 20 });
+  await act(hand, "c", { type: "bet", amount: 20 });
+  await act(hand, "a", { type: "bet", amount: 20 });
+
+  expect(hand.getState().communityCards.length).toBe(5);
+});
+
+test("reset bets after river", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 10 });
+  await act(hand, "c", { type: "bet", amount: 20 });
+  
+  expect(hand.getState().communityCards.length).toBe(0);
+  
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 20 });
+
+  expect(hand.getState().communityCards.length).toBe(3);
+
+  await act(hand, "b", { type: "bet", amount: 20 });
+  await act(hand, "c", { type: "bet", amount: 20 });
+  await act(hand, "a", { type: "bet", amount: 20 });
+  
+  expect(hand.getState().communityCards.length).toBe(4);
+
+  await act(hand, "b", { type: "bet", amount: 20 });
+  await act(hand, "c", { type: "bet", amount: 20 });
+  await act(hand, "a", { type: "bet", amount: 20 });
+
+  expect(Object.values(hand.getState().bets).reduce((a,b) => a+b)).toBe(0);
+});
+
+test("reset minRaise after river", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 10 });
+  await act(hand, "c", { type: "bet", amount: 20 });
+  
+  expect(hand.getState().communityCards.length).toBe(0);
+  
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 20 });
+
+  expect(hand.getState().communityCards.length).toBe(3);
+
+  await act(hand, "b", { type: "bet", amount: 40 });
+  await act(hand, "c", { type: "bet", amount: 40 });
+  await act(hand, "a", { type: "bet", amount: 40 });
+
+  expect(hand.getState().communityCards.length).toBe(4);
+
+  await act(hand, "b", { type: "bet", amount: 44 });
+  await act(hand, "c", { type: "bet", amount: 44 });
+  await act(hand, "a", { type: "bet", amount: 44 });
+
+  expect(hand.getState().minRaise).toBe(20);
+});
+
+test("second player acts first after river", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 10 });
+  await act(hand, "c", { type: "bet", amount: 20 });
+  
+  expect(hand.getState().communityCards.length).toBe(0);
+  
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 20 });
+
+  expect(hand.getState().communityCards.length).toBe(3);
+
+  await act(hand, "b", { type: "bet", amount: 20 });
+  await act(hand, "c", { type: "bet", amount: 20 });
+  await act(hand, "a", { type: "bet", amount: 20 });
+
+  expect(hand.getState().communityCards.length).toBe(4);
+  
+  await act(hand, "b", { type: "bet", amount: 20 });
+  await act(hand, "c", { type: "bet", amount: 20 });
+  await act(hand, "a", { type: "bet", amount: 20 });
+  
+  expect(hand.getState().communityCards.length).toBe(5);
+
+  const actAfterFlop = await act(hand, "b", { type: "bet", amount: 20 })
+  expect(actAfterFlop).not.toThrow(new Error());
+});
+
 test("diller acts last after reiver 2 player", async () => {
   const { hand } = await makeHand([player("a"), player("b")]);
 
@@ -259,6 +390,11 @@ test("diller acts last after reiver 2 player", async () => {
   await act(hand, "b", { type: "bet", amount: 20 });
 
   expect(hand.getState().communityCards.length).toBe(4);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 20 });
+
+  expect(hand.getState().communityCards.length).toBe(5);
 
   const actAfterFlop = await act(hand, "a", { type: "bet", amount: 20 })
   expect(actAfterFlop).not.toThrow(new Error());

@@ -230,6 +230,13 @@ export class Hand implements HandInterface {
     this._minRaise = this._gameConfig.bigBlind
     this._resetBets()
   }
+  private _river() {
+    this._communityCards = this._openCards(this._communityCards, this._deck.splice(this._deckPointer, 1) as string[])
+    this._deckPointer += 1
+    this._resetSeatIndex()
+    this._minRaise = this._gameConfig.bigBlind
+    this._resetBets()
+  }
   act(playerId: string, action: PlayerAction): void {
     if (this._nextSeat().playerId !== playerId) {
       throw new Error("Cant't act")
@@ -248,6 +255,7 @@ export class Hand implements HandInterface {
     ) {
       if (this._communityCards.length === 0) this._flop()
       else if (this._communityCards.length === 3) this._turn()
+      else if (this._communityCards.length === 4) this._river()
     } 
   }
   isValidBet(playerId: string, amount: number): boolean {
