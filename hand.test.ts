@@ -157,3 +157,25 @@ test("reset bet after flop", async () => {
 
   expect(hand.getState().minRaise).toBe(20);
 });
+
+test.only("reset bets after flop", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 10 });
+  await act(hand, "c", { type: "bet", amount: 20 });
+  
+  expect(hand.getState().communityCards.length).toBe(0);
+  
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 20 });
+
+  expect(hand.getState().communityCards.length).toBe(3);
+
+  await act(hand, "b", { type: "bet", amount: 10 });
+  await act(hand, "c", { type: "bet", amount: 10 });
+  await act(hand, "a", { type: "bet", amount: 10 });
+
+  expect(Object.values(hand.getState().bets).reduce((a,b) => a+b)).toBe(0);
+});
+

@@ -141,6 +141,7 @@ export class Hand implements HandInterface {
   private _minRaise: number = 0
   private _deck: string[] = []
   private _deckPointer: number = 0
+  private _betOrFold: Set<string> = new Set()
 
   private _dealCards(deck: string[], seats: Seat[]) {
     return Object.fromEntries(
@@ -209,6 +210,16 @@ export class Hand implements HandInterface {
     this._startWith = this._seatIndex
     this._minRaise = this._gameConfig.bigBlind
   }
+  private _resetBets() {
+    Object.keys(this._bets).forEach(key => this._bets[key] = 0)
+  }
+  private _flop() {
+    this._communityCards = this._openCards(this._communityCards, this._deck.splice(this._deckPointer, 3) as string[])
+    this._deckPointer += 3
+    this._seatIndex = 0
+    this._minRaise = this._gameConfig.bigBlind
+    this._resetBets()
+  }
   act(playerId: string, action: PlayerAction): void {
     if (this._nextSeat().playerId !== playerId) {
       throw new Error("Cant't act")
@@ -220,20 +231,19 @@ export class Hand implements HandInterface {
     } else {
       this._fold(playerId)
     }
+    this._betOrFold.add(playerId)
 
-    if ((this._seatIndex === this._startWith) && this._isBetsEqual()) {
-      if (this._communityCards.length === 0) {
-        this._communityCards = this._openCards(this._communityCards, this._deck.splice(this._deckPointer, 3) as string[])
-        this._deckPointer += 3
-        this._nextSeat()
-        this._minRaise = this._gameConfig.bigBlind
-      }
+    if ((this._betOrFold.size >= this._seats.length)
+      && this._isBetsEqual()
+    ) {
+      if (this._communityCards.length === 0) this._flop()
     } 
   }
   isValidBet(playerId: string, amount: number): boolean {
     const seat = this.getSeatByPlayerId(playerId)
     const sum = amount + (this._bets[playerId] || 0)
 
+    console.log(playerId, amount, sum, this._minRaise)
     if (seat && (
       amount <= seat.stack &&
       (sum === this._minRaise
