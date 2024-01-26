@@ -138,7 +138,7 @@ export class Hand implements HandInterface {
   private _sleep: (ms: number) => Promise<unknown>
   private _communityCards: string[] = []
   private _holeCards: Record<string, [string, string]> = {}
-  private _pots: { potId: string, amount: number }[] = []
+  private _pots: { potId: string, amount: number }[] = [{ potId: '1', amount: 0 }]
   private _bets: Record<string, number> = {}
   private _minRaise: number = 0
   private _deck: string[] = []
@@ -154,6 +154,13 @@ export class Hand implements HandInterface {
   }
   
   private _bet(playerId: string, bet: number) {
+    const seat = this.getSeatByPlayerId(playerId)
+    if (seat) {
+      seat.stack -= bet
+      if (!seat.stack) this._allInSet.add(playerId)
+      else this._betSet.add(playerId);
+      (this._pots[0] as { amount: number }).amount += bet 
+    }
     if (!this._bets[playerId]) this._bets[playerId] = 0
     
     this._bets[playerId] += bet
@@ -214,6 +221,7 @@ export class Hand implements HandInterface {
     this._resetSeatIndex()
     this._bet(this._nextSeat().playerId, this._gameConfig.smallBlind)
     this._bet(this._nextSeat().playerId, this._gameConfig.bigBlind)
+    this._betSet = new Set()
     this._startWith = this._seatIndex
     this._minRaise = this._gameConfig.bigBlind
   }
@@ -243,7 +251,23 @@ export class Hand implements HandInterface {
     this._resetBets()
   }
   private _showdown() {
-    this._givePots?.()
+    const { holeCards, communityCards } = this.getState()
+    const playersCards = Object.values(holeCards).map(playerCards => CardGroup.fromString(playerCards.join('')) as [Card, Card])
+    const board = CardGroup.fromString(communityCards.join(''))
+    
+    const result = OddsCalculator.calculateWinner(playersCards, board)
+   
+    Object.keys(this._pots).map(potId => {
+      this._givePots?.({
+        potId,
+        playerIds: (result[0] || [])
+          .map(({ index }) => this._seats[index]?.playerId),
+        winningCards: [...new Set(
+          (result[0] || [])
+            .map(({ handrank: { highcards: { cards } } }) => cards.map(c => c.toString())).flat()
+        )].sort()
+      })
+    })
   }
   act(playerId: string, action: PlayerAction): void {
     if (this._nextSeat().playerId !== playerId) {
@@ -252,12 +276,6 @@ export class Hand implements HandInterface {
     if (action.type === 'bet') {
       if (this.isValidBet(playerId, action.amount)) {
         this._bet(playerId, action.amount)
-        const seat = this.getSeatByPlayerId(playerId)
-        if (seat) {
-          seat.stack -= action.amount          
-          if (!seat.stack) this._allInSet.add(playerId)
-          else this._betSet.add(playerId)
-        }
       }
     } else {
       this._fold(playerId)

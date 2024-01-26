@@ -400,7 +400,7 @@ test("diller acts last after reiver 2 player", async () => {
   expect(actAfterFlop).not.toThrow(new Error());
 })
 
-test.only("tie", async () => {
+test("tie", async () => {
   const { hand, listener } = await makeHand(
     [player("a", 20), player("b", 20), player("c", 20), player("d", 20)],
     ["7h7c", "7s7d", "AcKs", "2d3c", "8dJs6s2h4c"].join("")
@@ -411,4 +411,21 @@ test.only("tie", async () => {
   await allIn(hand, "b");
 
   expect(listener).toHaveBeenCalled()
+});
+
+test("tie 2", async () => {
+  const { hand, listener } = await makeHand(
+    [player("a", 20), player("b", 20), player("c", 20), player("d", 20)],
+    ["7h7c", "AcKs", "7s7d", "2d3c", "8dJs6s2h4c"].join("")
+  );
+
+  await allIn(hand, "d");
+  await allIn(hand, "a");
+  await allIn(hand, "b");
+
+  expect(listener).toHaveBeenCalledWith({
+    playerIds: ["a", "c"],
+    winningCards: ["6s", "7c", "7d", "7h", "7s", "8d", "Js"],
+    potId: expect.any(String) as string,
+  });
 });
