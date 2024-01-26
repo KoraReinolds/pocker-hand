@@ -122,8 +122,10 @@ export class Hand implements HandInterface {
     this._gameConfig = gameConfig
     this._makeDeck = injections.makeDeck || generateNewDeck
     this._sleep = injections.sleep || sleep
-    // this._givePots = injections.givePots
+    this._givePots = injections.givePots
   }
+
+  private _givePots: Function | undefined
 
   private _seats: Seat[]
   private _seatIndex = 0
@@ -141,11 +143,13 @@ export class Hand implements HandInterface {
   private _minRaise: number = 0
   private _deck: string[] = []
   private _deckPointer: number = 0
-  private _betOrFold: Set<string> = new Set()
+  private _betSet: Set<string> = new Set()
+  private _foldSet: Set<string> = new Set()
+  private _allInSet: Set<string> = new Set()
 
   private _dealCards(deck: string[], seats: Seat[]) {
     return Object.fromEntries(
-      seats.map((s, i) => [s.playerId, deck.splice(i*2, 2) as [string, string]])
+      seats.map((s, i) => [s.playerId, deck.slice(i*2, i*2 + 2) as [string, string]])
     )
   }
   
@@ -205,7 +209,7 @@ export class Hand implements HandInterface {
     this._deck = this._makeDeck()
 
     this._holeCards = this._dealCards(this._deck, this._seats)
-    this._deckPointer = this._seats.length * 2 + 1
+    this._deckPointer = this._seats.length * 2
 
     this._resetSeatIndex()
     this._bet(this._nextSeat().playerId, this._gameConfig.smallBlind)
@@ -215,27 +219,31 @@ export class Hand implements HandInterface {
   }
   private _resetBets() {
     Object.keys(this._bets).forEach(key => this._bets[key] = 0)
+    this._betSet = new Set()
   }
   private _flop() {
-    this._communityCards = this._openCards(this._communityCards, this._deck.splice(this._deckPointer, 3) as string[])
+    this._communityCards = this._openCards(this._communityCards, this._deck.slice(this._deckPointer, this._deckPointer + 3) as string[])
     this._deckPointer += 3
     this._resetSeatIndex()
     this._minRaise = this._gameConfig.bigBlind
     this._resetBets()
   }
   private _turn() {
-    this._communityCards = this._openCards(this._communityCards, this._deck.splice(this._deckPointer, 1) as string[])
+    this._communityCards = this._openCards(this._communityCards, this._deck.slice(this._deckPointer, this._deckPointer + 1) as string[])
     this._deckPointer += 1
     this._resetSeatIndex()
     this._minRaise = this._gameConfig.bigBlind
     this._resetBets()
   }
   private _river() {
-    this._communityCards = this._openCards(this._communityCards, this._deck.splice(this._deckPointer, 1) as string[])
+    this._communityCards = this._openCards(this._communityCards, this._deck.slice(this._deckPointer, this._deckPointer + 1) as string[])
     this._deckPointer += 1
     this._resetSeatIndex()
     this._minRaise = this._gameConfig.bigBlind
     this._resetBets()
+  }
+  private _showdown() {
+    this._givePots?.()
   }
   act(playerId: string, action: PlayerAction): void {
     if (this._nextSeat().playerId !== playerId) {
@@ -244,18 +252,36 @@ export class Hand implements HandInterface {
     if (action.type === 'bet') {
       if (this.isValidBet(playerId, action.amount)) {
         this._bet(playerId, action.amount)
+        const seat = this.getSeatByPlayerId(playerId)
+        if (seat) {
+          seat.stack -= action.amount          
+          if (!seat.stack) this._allInSet.add(playerId)
+          else this._betSet.add(playerId)
+        }
       }
     } else {
       this._fold(playerId)
+      this._foldSet.add(playerId)
     }
-    this._betOrFold.add(playerId)
 
-    if ((this._betOrFold.size >= this._seats.length)
+    if (this._allInSet.size + 1 === this._seats.length) {
+      if (this._communityCards.length === 0) this._flop()
+      if (this._communityCards.length === 3) this._turn()
+      if (this._communityCards.length === 4) this._river()
+      if (this._communityCards.length === 5) this._showdown()
+    }
+    if ((
+      (new Set([
+      ...this._foldSet,
+      ...this._betSet,
+      ...this._allInSet
+    ])).size >= this._seats.length)
       && this._isBetsEqual()
     ) {
       if (this._communityCards.length === 0) this._flop()
       else if (this._communityCards.length === 3) this._turn()
       else if (this._communityCards.length === 4) this._river()
+      else if (this._communityCards.length === 5) this._showdown()
     } 
   }
   isValidBet(playerId: string, amount: number): boolean {
@@ -263,9 +289,12 @@ export class Hand implements HandInterface {
     const sum = amount + (this._bets[playerId] || 0)
 
     if (seat && (
-      amount <= seat.stack &&
-      (sum === this._minRaise
-      || sum >= (this._minRaise * 2))
+      amount === seat.stack ||
+      (
+        amount < seat.stack &&
+        (sum === this._minRaise
+        || sum >= (this._minRaise * 2))
+      )
     )) {
       return true
     } else {

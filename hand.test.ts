@@ -399,3 +399,16 @@ test("diller acts last after reiver 2 player", async () => {
   const actAfterFlop = await act(hand, "a", { type: "bet", amount: 20 })
   expect(actAfterFlop).not.toThrow(new Error());
 })
+
+test.only("tie", async () => {
+  const { hand, listener } = await makeHand(
+    [player("a", 20), player("b", 20), player("c", 20), player("d", 20)],
+    ["7h7c", "7s7d", "AcKs", "2d3c", "8dJs6s2h4c"].join("")
+  );
+
+  await allIn(hand, "d");
+  await allIn(hand, "a");
+  await allIn(hand, "b");
+
+  expect(listener).toHaveBeenCalled()
+});
