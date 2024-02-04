@@ -283,6 +283,7 @@ export class Hand implements HandInterface {
       if (this._communityCards.length === 4) this._river()
       if (this._communityCards.length === 5) this._showdown()
     }
+// console.log(this._bets, this._betSet, this._isBetsEqual(), playerId)
     if ((
       (new Set([
       ...this._foldSet,
@@ -307,8 +308,17 @@ export class Hand implements HandInterface {
         // Player is going All-In, any amount up to their entire stack is valid
         return true;
       } else if (amount < seat.stack) {
+        const totalOtherBets = Object.values(this._bets)
+          .reduce((total, bet) => total + bet, 0);
+
         // Regular bet, check against minRaise rules only if no players have gone All-In
-        if (this._allInSet.size === 0 && (amount === call || amount >= call * 2)) {
+        if (
+          this._allInSet.size === 0 && (
+            amount === call 
+            || amount >= call * 2 
+            || (amount === 0 && totalOtherBets === 0)
+          )
+        ) {
           return true;
         } else if (this._allInSet.size > 0) {
           // Other players have gone All-In, so any bet is valid

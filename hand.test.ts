@@ -1,4 +1,5 @@
 import { expect, test, vi, describe } from "vitest";
+// import { Hand, type HandInterface } from "./done/hand.best";
 import { Hand, type HandInterface } from "./hand";
 
 const player = (name: string, stack: number = 1000) => ({
@@ -135,3 +136,28 @@ test("correctly handles huge raise", async () => {
   expect(hand.getState().minRaise).toBe(24990);
 });
 
+test("can't raise after all checks", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 200 });
+  await act(hand, "b", { type: "bet", amount: 190 });
+  await act(hand, "c", { type: "bet", amount: 180 });
+
+  expect(hand.getState().communityCards.length).toBe(3);
+});
+
+test("full round of checking after flop", async () => {
+  const { hand } = await makeHand([player("a"), player("b"), player("c")]);
+
+  await act(hand, "a", { type: "bet", amount: 20 });
+  await act(hand, "b", { type: "bet", amount: 10 });
+  await act(hand, "c", { type: "bet", amount: 0 });
+
+  expect(hand.getState().communityCards.length).toBe(3);
+
+  await act(hand, "b", { type: "bet", amount: 0 });
+  await act(hand, "c", { type: "bet", amount: 0 });
+  await act(hand, "a", { type: "bet", amount: 0 });
+
+  expect(hand.getState().communityCards.length).toBe(4);
+});
