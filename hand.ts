@@ -163,12 +163,8 @@ export class Hand implements HandInterface {
     }
     if (!this._bets[playerId]) this._bets[playerId] = 0
     
+    this._minRaise = Math.max(bet - (this._bets[playerId] || 0), this._minRaise)
     this._bets[playerId] += bet
-    this._minRaise = Math.max(this._bets[playerId] || 0, this._minRaise)
-  }
-
-  private _fold(playerId: string) {
-    this._foldPlayers.push(playerId)
   }
 
   private _getSeat(): Seat {
@@ -178,7 +174,7 @@ export class Hand implements HandInterface {
   private _nextSeat(): Seat {
     this._seatIndex = (this._seatIndex + 1) % this._seats.length
     const seat: Seat = this._getSeat()
-    return (this._foldPlayers.includes(seat.playerId))
+    return (this._foldSet.has(seat.playerId) || this._allInSet.has(seat.playerId))
       ? this._nextSeat()
       : seat
   }
@@ -189,7 +185,7 @@ export class Hand implements HandInterface {
   
   private _isBetsEqual() {
     const betsInPlay = Object.entries(this._bets)
-      .filter(([id]) => !this._foldPlayers.includes(id))
+      .filter(([id]) => !this._foldSet.has(id))
       .map(([_, bet]) => bet)
     return betsInPlay[0] === (betsInPlay.reduce((sum, cur) => sum + cur) / betsInPlay.length)
   }
@@ -271,14 +267,13 @@ export class Hand implements HandInterface {
   }
   act(playerId: string, action: PlayerAction): void {
     if (this._nextSeat().playerId !== playerId) {
-      throw new Error("Cant't act")
+      throw new Error("Can't act")
     }
     if (action.type === 'bet') {
       if (this.isValidBet(playerId, action.amount)) {
         this._bet(playerId, action.amount)
       }
     } else {
-      this._fold(playerId)
       this._foldSet.add(playerId)
     }
 
@@ -303,22 +298,26 @@ export class Hand implements HandInterface {
     } 
   }
   isValidBet(playerId: string, amount: number): boolean {
-    const seat = this.getSeatByPlayerId(playerId)
-    const sum = amount + (this._bets[playerId] || 0)
-
-    if (seat && (
-      amount === seat.stack ||
-      (
-        amount < seat.stack &&
-        (sum === this._minRaise
-        || sum >= (this._minRaise * 2))
-      )
-    )) {
-      return true
-    } else {
-      throw new Error("Can't bet")
-      return false
+    const seat = this.getSeatByPlayerId(playerId);
+  
+    if (seat && seat.stack > 0) {
+      const call = this._minRaise - (this._bets[playerId] || 0)
+  
+      if (amount === seat.stack) {
+        // Player is going All-In, any amount up to their entire stack is valid
+        return true;
+      } else if (amount < seat.stack) {
+        // Regular bet, check against minRaise rules only if no players have gone All-In
+        if (this._allInSet.size === 0 && (amount === call || amount >= call * 2)) {
+          return true;
+        } else if (this._allInSet.size > 0) {
+          // Other players have gone All-In, so any bet is valid
+          return true;
+        }
+      }
     }
+  
+    return false;
   }
   getSeatByPlayerId(playerId: string): Seat | undefined {
     return this._seats.find(s => s.playerId === playerId)
